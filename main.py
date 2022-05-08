@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 
 
-def detect_motion(path: str, mask_path: str):
+def detect_motion(path: str, mask_path: str, kernel_val: int, ksize: int, debug: bool):
     cap = cv2.VideoCapture(path)
     previous_frame = None
 
@@ -19,7 +19,7 @@ def detect_motion(path: str, mask_path: str):
         prepared_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         # TODO parameterize this with command line
-        prepared_frame = cv2.GaussianBlur(src=prepared_frame, ksize=(9, 9), sigmaX=0)
+        prepared_frame = cv2.GaussianBlur(src=prepared_frame, ksize=(ksize, ksize), sigmaX=0)
 
         # Adding pressing Escape to close window
         if cv2.waitKey(30) == 27:
@@ -32,7 +32,7 @@ def detect_motion(path: str, mask_path: str):
 
             # Dilating difference frame to make differences more visible
             # TODO parameterize this with command line
-            kernel = np.ones((7, 7))
+            kernel = np.ones((kernel_val, kernel_val))
             dilated_diff_frame = cv2.dilate(diff_frame, kernel, 1)
 
             # Filtering differences through threshold
@@ -59,6 +59,8 @@ def detect_motion(path: str, mask_path: str):
 
             # TODO pokazywanie ramki like this
             cv2.imshow('Video', frame)
+            if debug:
+                cv2.imshow('Diff', diff_frame)
 
 
         previous_frame = prepared_frame
@@ -72,9 +74,14 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("Source", type=str, nargs="?", const="")
     parser.add_argument("--mask", type=str, nargs=1)
-
+    parser.add_argument("--debug", type=bool, nargs="?", const=False, default=False)
+    parser.add_argument("--ksize", type=int, nargs="?", const=9, default=9)
+    parser.add_argument("--kernel", type=int, nargs="?", const=7, default=7)
     args = parser.parse_args()
     video_path = args.Source
     mask_path = args.mask
-
-    detect_motion(video_path or 0, mask_path[0])
+    debug = args.debug
+    ksize = args.ksize
+    kernel_val = args.kernel
+    print(kernel_val)
+    detect_motion(video_path or 0, mask_path[0], kernel_val, ksize, debug)
