@@ -1,14 +1,19 @@
 import cv2
 import numpy as np
+import argparse
 
 
-# Modifying derived images modifies source images!
-# Example: adding contours to prepared_frame *at the end*, adds contours to diff_frame, dilated_diff_frame etc.
-def my_motion_detector():
-    cap = cv2.VideoCapture('test2.mp4')
+def detect_motion(path: str, mask_path: str):
+    cap = cv2.VideoCapture(path)
     previous_frame = None
-    while True:
 
+    mask = None
+    if mask_path is not None:
+        print(mask_path)
+        mask = cv2.imread(mask_path)
+        mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+
+    while True:
         # Basic frame conversion
         ret, frame = cap.read()
         prepared_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -29,6 +34,12 @@ def my_motion_detector():
             # Filtering differences through threshold
             thresh_frame = cv2.threshold(src=dilated_diff_frame, thresh=30, maxval=255, type=cv2.THRESH_BINARY)[1]
 
+            # Applying mask
+            if mask is not None:
+                h, w = thresh_frame.shape
+                mask = cv2.resize(mask, (w, h), interpolation=cv2.INTER_NEAREST)
+                thresh_frame = cv2.multiply(thresh_frame, mask)
+
             # CONTOURS TEMPORARLY OFF BECAUSE THEY DONT WORK TOO GOOD
             # Finding and adding difference contours
             contours, _ = cv2.findContours(image=thresh_frame, mode=cv2.RETR_EXTERNAL, method=cv2.CHAIN_APPROX_SIMPLE)
@@ -45,6 +56,17 @@ def my_motion_detector():
 
         previous_frame = prepared_frame
 
+# python .\main_working.py [source] [--mask maska.png]
+# brak source oznacza kamerkę z komputera
+# python .\main_working.py test2.mp4 --mask mask_rightupper.png
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("Source", type=str, nargs="?", const="")
+    parser.add_argument("--mask", type=str, nargs=1)
 
-my_motion_detector()
+    args = parser.parse_args()
+    video_path = args.Source
+    mask_path = args.mask
+
+    detect_motion(video_path or 0, mask_path[0])
